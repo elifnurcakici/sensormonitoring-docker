@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Canlı Sensör Verileri</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e1e2f, #2b2b3d);
+      color: #fff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    header {
+      width: 100%;
+      height: 60px; /* Yükseklik sabitlendi */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 30px; /* Yatay boşluk */
+      background-color: #3b3b5c;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      border-bottom: none;
+      position: fixed; /* Üstte sabitle */
+      top: 0;
+      left: 0;
+      z-index: 1000; /* Üstte kalması için */
+    }
+
+    body {
+      padding-top: 60px; /* Header yüksekliği kadar boşluk bırak */
+    }
+
+
+        #logoutBtn {
+            position: absolute;
+            top: 15px;
+            right: 100px;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: non
+}
+
+
+    header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            color: white;
+    }
+
+    #logoutBtn {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+    }
+        #logoutBtn:hover {
+            background-color: #ff3b3b;
+        }
+
+    .cards {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      background: #3b3b5c;
+      border-radius: 15px;
+      padding: 30px 20px;
+      width: 250px;
+      text-align: center;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+      transition: transform 0.3s;
+    }
+
+    .card:hover {
+      transform: scale(1.08);
+    }
+
+    .card h2 {
+      margin-bottom: 15px;
+      font-size: 1.6em;
+    }
+
+    .value {
+      font-size: 3em;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+
+    .time {
+      font-size: 1em;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <header>
+        <button id="logoutBtn">Çıkış Yap</button>
+    </header>
+  <h1>Canlı Sensör Verileri</h1>
+  <div class="cards">
+    <div class="card">
+      <h2>Sıcaklık</h2>
+      <div class="value" id="tempValue">-- °C</div>
+      <div class="time" id="tempTime">--:--:--</div>
+    </div>
+    <div class="card">
+      <h2>Nem</h2>
+      <div class="value" id="humidityValue">-- %</div>
+      <div class="time" id="humidityTime">--:--:--</div>
+    </div>
+    <div class="card">
+      <h2>Basınç</h2>
+      <div class="value" id="pressureValue">-- hPa</div>
+      <div class="time" id="pressureTime">--:--:--</div>
+    </div>
+  </div>
+
+    <script>
+    async function fetchLatestData() {
+      try {
+        let resTemp = await fetch('/data/temperature/all');
+        let temps = await resTemp.json();
+        if (temps.length > 0) {
+          const latestTemp = temps[0];
+          document.getElementById("tempValue").textContent = `${latestTemp.Value.toFixed(1)} °C`;
+          document.getElementById("tempTime").textContent = new Date(latestTemp.CreatedAt).toLocaleTimeString();
+        }
+
+        let resHum = await fetch('/data/humidity/all');
+        let hums = await resHum.json();
+        if (hums.length > 0) {
+          const latestHum = hums[0];
+          document.getElementById("humidityValue").textContent = `${latestHum.Value.toFixed(1)} %`;
+          document.getElementById("humidityTime").textContent = new Date(latestHum.CreatedAt).toLocaleTimeString();
+        }
+
+        let resPress = await fetch('/data/pressure/all');
+        let presses = await resPress.json();
+        if (presses.length > 0) {
+          const latestPress = presses[0];
+          document.getElementById("pressureValue").textContent = `${latestPress.Value.toFixed(1)} hPa`;
+          document.getElementById("pressureTime").textContent = new Date(latestPress.CreatedAt).toLocaleTimeString();
+        }
+      } catch (err) {
+        console.error("HTTP ile veri alınırken hata:", err);
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", fetchLatestData);
+
+    const ws = new WebSocket("ws://localhost:8080/ws");
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      if (message.temperature) {
+        document.getElementById("tempValue").textContent = `${message.temperature.Value.toFixed(1)} °C`;
+        document.getElementById("tempTime").textContent = new Date(message.temperature.CreatedAt).toLocaleTimeString();
+      }
+      if (message.humidity) {
+        document.getElementById("humidityValue").textContent = `${message.humidity.Value.toFixed(1)} %`;
+        document.getElementById("humidityTime").textContent = new Date(message.humidity.CreatedAt).toLocaleTimeString();
+      }
+      if (message.pressure) {
+        document.getElementById("pressureValue").textContent = `${message.pressure.Value.toFixed(1)} hPa`;
+        document.getElementById("pressureTime").textContent = new Date(message.pressure.CreatedAt).toLocaleTimeString();
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error("WebSocket Hatası:", err);
+    };
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await fetch("/logout", { method: "POST" });
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>

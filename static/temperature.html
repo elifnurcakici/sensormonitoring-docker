@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sıcaklık Verileri</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e1e2f, #2b2b3d);
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            width: 100%;
+            height: 60px; /* Yükseklik sabitlendi */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px; /* Yatay boşluk */
+            background-color: #3b3b5c;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border-bottom: none;
+            position: fixed; /* Üstte sabitle */
+            top: 0;
+            left: 0;
+            z-index: 1000; /* Üstte kalması için */
+        }
+
+        body {
+            padding-top: 60px; /* Header yüksekliği kadar boşluk bırak */
+        }
+
+        #logoutBtn {
+            position: absolute;
+            top: 15px;
+            right: 100px;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: non
+}
+
+        h1 { margin-bottom: 20px; }
+
+        #logoutBtn {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+    }
+        #logoutBtn:hover {
+            background-color: #ff3b3b;
+    }
+        canvas {
+            max-width: 800px;
+            width: 100%;
+            background: #2a2a40;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        table {
+            margin-top: 30px;
+            border-collapse: collapse;
+            width: 80%;
+            background: #3b3b5c;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #555;
+        }
+        th { background-color: #4a4a7d; }
+        tr:hover { background-color: #5a5a8a; }
+        a.back {
+            margin-top: 20px;
+            display: inline-block;
+            color: #ff6b6b;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <button id="logoutBtn">Çıkış Yap</button>
+    </header>
+    <h1>Sıcaklık Verileri</h1>
+    <canvas id="tempChart" height="150"></canvas>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Değer (°C)</th>
+                <th>Zaman</th>
+            </tr>
+        </thead>
+        <tbody id="temperatureTable"></tbody>
+    </table>
+    <a href="indexadmin.html" class="back">← Özet Sayfasına Dön</a>
+
+    <script>
+        const ctx = document.getElementById('tempChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(255,99,132,0.4)');
+        gradient.addColorStop(1, 'rgba(255,99,132,0.8)');
+
+        const tempChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Sıcaklık (°C)', data: [], borderColor: 'rgb(255,99,132)', backgroundColor: gradient, fill: true, tension: 0.4 }] },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: '#fff' } } },
+                scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } }
+            }
+        });
+
+        const table = document.getElementById("temperatureTable");
+
+        function updateChartAndTable(data) {
+            const timeLabel = new Date(data.CreatedAt).toLocaleTimeString();
+
+            if (tempChart.data.labels.length >= 10) {
+                tempChart.data.labels.shift();
+                tempChart.data.datasets[0].data.shift();
+            }
+
+            tempChart.data.labels.push(timeLabel);
+            tempChart.data.datasets[0].data.push(data.Value);
+            tempChart.update();
+
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>${data.ID}</td><td>${data.Value.toFixed(2)}</td><td>${timeLabel}</td>`;
+            table.prepend(row);
+            if (table.rows.length > 10) {
+                table.deleteRow(10);
+            }
+        }
+
+        async function loadInitialData() {
+            const res = await fetch('/data/temperature/all');
+            const data = await res.json();
+            data.reverse().forEach(updateChartAndTable);
+        }
+
+        loadInitialData();
+
+        const ws = new WebSocket("ws://localhost:8080/ws");
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.temperature) {
+                updateChartAndTable(msg.temperature);
+            }
+        };
+
+        // Logout butonu işlevi
+      document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await fetch("/logout", { method: "POST" });
+      window.location.href = "login.html";
+    });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Giriş Yap</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e1e2f, #2b2b3d);
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      background: #3b3b5c;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      width: 300px;
+      text-align: center;
+    }
+    h2 { margin-bottom: 20px; }
+    input {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background-color: #ff6b6b;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover { background-color: #ff3b3b; }
+    a { color: #ddd; text-decoration: none; display: block; margin-top: 10px; }
+    .error { color: #ff6b6b; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Giriş Yap</h2>
+    <form id="loginForm">
+      <input type="text" id="username" placeholder="Kullanıcı Adı" required />
+      <input type="password" id="password" placeholder="Parola" required />
+      <button type="submit">Giriş Yap</button>
+    </form>
+    <div id="error" class="error"></div>
+    <a href="register.html">Hesabın yok mu? Kayıt Ol</a>
+  </div>
+
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const payload = {
+        username: document.getElementById("username").value.trim(),
+        password: document.getElementById("password").value
+      };
+
+      
+      const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          // redirect: 'manual'
+      });
+
+        if (res.redirected) {
+            window.location.href = res.url;
+        } else {
+          document.getElementById("error").textContent = "Kullanıcı adı veya şifre yanlış!";
+        }     
+    });
+  </script>
+</body>
+</html>

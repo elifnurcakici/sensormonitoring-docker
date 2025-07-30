@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kayıt Ol</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e1e2f, #2b2b3d);
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      background: #3b3b5c;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      width: 300px;
+      text-align: center;
+    }
+    h2 { margin-bottom: 20px; }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover { background-color: #45a049; }
+    a { color: #ddd; text-decoration: none; display: block; margin-top: 10px; }
+    .error { color: #ff6b6b; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Kayıt Ol</h2>
+    <form id="registerForm">
+      <input type="text" id="username" placeholder="Kullanıcı Adı" required>
+      <input type="password" id="password" placeholder="Parola" required>
+      <select id="role" required>
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button type="submit">Kayıt Ol</button>
+    </form>
+    <div id="error" class="error"></div>
+    <a href="login.html">Zaten hesabın var mı? Giriş Yap</a>
+  </div>
+
+  <script>
+  document.getElementById("registerForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const data = {
+      username: document.getElementById("username").value,
+      password: document.getElementById("password").value,
+      role: document.getElementById("role").value
+    };
+
+    const res = await fetch('/register', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (res.ok) {
+      window.location.href = "login.html";
+    } else {
+      document.getElementById("error").textContent = "Kayıt başarısız!";
+    }
+  });
+</script>
+
+</body>
+</html>
