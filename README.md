@@ -27,28 +27,28 @@ docker-compose up --build -d
 3. Tarayıcınızda http://localhost:8080 adresine gidin.
 
 ## 🌐 Login Sayfası
-(static/screenshoots/login.jpeg)
+![Login](static/screenshoots/login.jpeg)
 
 ## 🌐 Register Sayfası
-(static/screenshoots/register.jpeg)
+![Register](static/screenshoots/register.jpeg)
 
 ## 🌐 User Ana Sayfası
-(static/screenshoots/indexadmin.jpeg)
+![User](static/screenshoots/indexadmin.jpeg)
 
 ## 🌐 Admin Ana Sayfası
-(static/screenshoots/login.jpeg)
+![Admin](static/screenshoots/login.jpeg)
 
 ## 🌐 Veri ekleme
-(static/screenshoots/add.jpeg)
+![Add](static/screenshoots/add.jpeg)
 
 ## 🌐 Sıcaklık Sayfası
-(static/screenshoots/temperature.png)
+![Temperature](static/screenshoots/temperature.png)
 
 ## 🌐 Nem Sayfası
-(static/screenshoots/humidity.png)
+![Humidity](static/screenshoots/humidity.png)
 
 ## 🌐 Basınç Sayfası
-(static/screenshoots/pressure.png)
+![Pressure](static/screenshoots/pressure.png)
 
 API Endpointleri
 - GET /data/temperature/all - Son 10 sıcaklık verisi
