@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Giriş Yap</title>
+  <title>SenseWatch</title>
   <style>
     body {
       background: linear-gradient(135deg, #1e1e2f, #2b2b3d);
@@ -52,35 +52,68 @@
     <form id="loginForm">
       <input type="text" id="username" placeholder="Kullanıcı Adı" required />
       <input type="password" id="password" placeholder="Parola" required />
-      <button type="submit">Giriş Yap</button>
+        <button type="submit">Giriş Yap</button>
     </form>
     <div id="error" class="error"></div>
     <a href="register.html">Hesabın yok mu? Kayıt Ol</a>
   </div>
 
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
   <script>
-    document.getElementById("loginForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
+    // <div class="g-recaptcha" data-sitekey="6LfKkZUrAAAAAKDC6rpmje4KBP7P6IiOqXGgqggo" data-callback></div> 
+  document.getElementById("loginForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-      const payload = {
-        username: document.getElementById("username").value.trim(),
-        password: document.getElementById("password").value
-      };
+    const errorBox = document.getElementById("error");
+    errorBox.textContent = ""; // Hataları temizle
 
-      
-      const res = await fetch('/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          // redirect: 'manual'
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    /*const token = grecaptcha.getResponse(); // reCAPTCHA token
+
+    if (!token) {
+      errorBox.textContent = "Lütfen reCAPTCHA doğrulamasını tamamlayın.";
+      return;
+    }
+      */
+
+    try {
+      const response = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Session cookie gönderilecek
+        body: JSON.stringify({ username, password}) // ,token
       });
 
-        if (res.redirected) {
-            window.location.href = res.url;
+      // 1. HTTP status log
+      console.log("Login response status:", response.status);
+
+      // 2. Başarılıysa JSON cevabı al
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Login response data:", data);
+
+        // 3. JSON içinde yönlendirme varsa işle
+        if (data.redirect) {
+          window.location.href = data.redirect;
         } else {
-          document.getElementById("error").textContent = "Kullanıcı adı veya şifre yanlış!";
-        }     
-    });
-  </script>
+          errorBox.textContent = "Giriş başarılı ama yönlendirme bilgisi yok.";
+        }
+
+      } else {
+        // 4. Giriş başarısız ise hata mesajı yazdır
+        const text = await response.text();
+        errorBox.textContent = text || "Giriş başarısız.";
+        grecaptcha.reset();
+      }
+    } catch (err) {
+      // 5. Sunucu hatası
+      errorBox.textContent = "Sunucu hatası: " + err.message;
+      grecaptcha.reset();
+    }
+  });
+</script>
+
 </body>
 </html>

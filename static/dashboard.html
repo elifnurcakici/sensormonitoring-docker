@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard - SenseWatch</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #1e1e2f;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    height: 60px;
+    padding: 0 30px;
+    background-color: #2b2b3d;
+  }
+  .logo {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #ff6b6b;
+    flex: 1;
+  }
+  nav {
+    display: flex;
+    gap: 20px;
+  }
+  nav a, nav button {
+    color: #fff;
+    background-color: #ff6b6b;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  nav a:hover, nav button:hover {
+    background-color: #e05555;
+  }
+  main {
+    flex: 1;
+    margin: 0 20px;
+  }
+  section {
+    margin-bottom: 40px;
+  }
+  h1 {
+    margin-bottom: 20px;
+    color: #ff6b6b;
+  }
+  ul {
+    list-style-type: none;
+    padding-left: 0;
+  }
+  li {
+    margin-bottom: 8px;
+    font-size: 1rem;
+  }
+  .sensor-counts {
+    display: flex;
+    gap: 40px;
+  }
+  .sensor-count {
+    font-size: 1.2rem;
+  }
+  .sensor-count strong {
+    color: #ff6b6b;
+  }
+
+  /* Sensör veri blokları - alt kısım */
+  .container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: nowrap;
+    width: 100%;
+    margin-top: 40px;
+    justify-content: space-between;
+  }
+  .sensor-block {
+    background: #2a2a40;
+    padding: 25px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 100%;
+
+  }
+  canvas {
+    width: 100% !important;
+    height: 400px !important;
+    background: #3b3b5c;
+    border-radius: 8px;
+  }
+  table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+    background: #3b3b5c;
+    border-radius: 8px;
+  }
+  th, td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid #555;
+  }
+  th {
+    background: #4a4a7d;
+  }
+  tr:hover {
+    background: #5a5a8a;
+  }
+
+  /* Responsive ayar */
+@media (max-width: 900px) {
+  .container {
+    flex-wrap: wrap;
+  }
+  .sensor-block {
+    width: 100%;
+    height: auto;
+    min-height: 400px;
+    margin-bottom: 30px;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SenseWatch</div>
+  <nav>
+    <a href="change.html">Şifre Değiştir</a>
+    <a href="sensor.html">Sensör Detayları</a>
+    <button id="logoutBtn">Çıkış</button>
+  </nav>
+</header>
+
+<main>
+  <section>
+    <h1>Son 5 Giriş / Çıkış Zamanı</h1>
+    <ul id="loginLogoutList">
+      <!-- JS ile doldurulacak -->
+    </ul>
+  </section>
+
+  <section>
+    <h1>Sensör Sayıları</h1>
+    <div class="sensor-counts">
+      <div class="sensor-count">Sıcaklık: <strong id="tempCount">0</strong></div>
+      <div class="sensor-count">Nem: <strong id="humidityCount">0</strong></div>
+      <div class="sensor-count">Basınç: <strong id="pressureCount">0</strong></div>
+    </div>
+  </section>
+
+  <!-- Sensör verileri ve grafik alanı -->
+  <section>
+    <h1>Workspace Sensör Verileri</h1>
+
+    <div class="container">
+      <div class="sensor-block" id="temperatureBlock">
+        <h2>Sıcaklık</h2>
+        <canvas id="tempChart"></canvas>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Değer</th><th>Zaman</th></tr>
+          </thead>
+          <tbody id="tempTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="sensor-block" id="humidityBlock">
+        <h2>Nem</h2>
+        <canvas id="humidityChart"></canvas>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Değer</th><th>Zaman</th></tr>
+          </thead>
+          <tbody id="humidityTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="sensor-block" id="pressureBlock">
+        <h2>Basınç</h2>
+        <canvas id="pressureChart"></canvas>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Değer</th><th>Zaman</th></tr>
+          </thead>
+          <tbody id="pressureTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  async function fetchLoginLogoutTimes() {
+    const res = await fetch("/api/login-history", { credentials: "include" });
+    if (!res.ok) {
+      console.error("Giriş geçmişi alınamadı.");
+      return;
+    }
+    const data = await res.json();
+    const listEl = document.getElementById("loginLogoutList");
+    listEl.innerHTML = "";
+    data.forEach(item => {
+      const li = document.createElement("li");
+      li.textContent = `${item.time} - ${item.action}`;
+      listEl.appendChild(li);
+    });
+  }
+
+  async function fetchSensorCounts() {
+    try {
+      const res = await fetch('/api/sensor-counts', { credentials: "include" });
+      if (!res.ok) throw new Error('Sensor sayısı alınamadı');
+      const counts = await res.json();
+      document.getElementById("tempCount").textContent = counts.temperature || 0;
+      document.getElementById("humidityCount").textContent = counts.humidity || 0;
+      document.getElementById("pressureCount").textContent = counts.pressure || 0;
+    } catch {
+      console.warn("Sensör sayıları yüklenemedi.");
+    }
+  }
+
+  const charts = {
+    temperature: null,
+    humidity: null,
+    pressure: null
+  };
+
+  async function getUserWorkspaceID() {
+    const res = await fetch('/api/user-info', { credentials: "include" });
+    if (!res.ok) throw new Error("Giriş yapılmamış veya yetki yok.");
+    const user = await res.json();
+    return user.workspace_id;
+  }
+
+  function updateChartAndTable(sensorType, readings) {
+    const canvasId = sensorType === "temperature" ? "tempChart" : sensorType + "Chart";
+    const tableBodyId = sensorType === "temperature" ? "tempTableBody" : sensorType + "TableBody";
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const tableBody = document.getElementById(tableBodyId);
+
+    const labels = readings.map(r => new Date(r.CreatedAt).toLocaleTimeString());
+    const data = readings.map(r => r.Value);
+
+    tableBody.innerHTML = "";
+
+    readings.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${r.ID}</td><td>${r.Value.toFixed(2)}</td><td>${new Date(r.CreatedAt).toLocaleString()}</td>`;
+      tableBody.appendChild(tr);
+    });
+
+    if (charts[sensorType]) {
+      charts[sensorType].data.labels = labels;
+      charts[sensorType].data.datasets[0].data = data;
+      charts[sensorType].update();
+    } else {
+      charts[sensorType] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: sensorType.charAt(0).toUpperCase() + sensorType.slice(1),
+            data: data,
+            borderColor: sensorType === 'temperature' ? 'rgb(255,99,132)' :
+                         sensorType === 'humidity' ? 'rgb(54,162,235)' : 'rgb(255,206,86)',
+            backgroundColor: 'rgba(0,0,0,0)',
+            tension: 0.3,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { ticks: { color: '#fff' }},
+            y: { ticks: { color: '#fff' }}
+          },
+          plugins: {
+            legend: { labels: { color: '#fff' } }
+          }
+        }
+      });
+    }
+  }
+
+  async function loadSensorDataByTypeAndWorkspace(sensorType, workspaceID) {
+    const sensorRes = await fetch(`/api/sensors?type=${sensorType}`, { credentials: "include" });
+    if (!sensorRes.ok) {
+      updateChartAndTable(sensorType, []);
+      return;
+    }
+
+    const sensors = await sensorRes.json();
+    if (sensors.length === 0) {
+      updateChartAndTable(sensorType, []);
+      return;
+    }
+
+    const sensorID = sensors[0].ID;
+
+    const dataRes = await fetch(`/api/sensor-data?sensor_id=${sensorID}`, { credentials: "include" });
+    if (!dataRes.ok) {
+      updateChartAndTable(sensorType, []);
+      return;
+    }
+
+    const data = await dataRes.json();
+    updateChartAndTable(sensorType, data.reverse());
+  }
+
+  async function loadAllSensorData(workspaceID) {
+    await loadSensorDataByTypeAndWorkspace("temperature", workspaceID);
+    await loadSensorDataByTypeAndWorkspace("humidity", workspaceID);
+    await loadSensorDataByTypeAndWorkspace("pressure", workspaceID);
+  }
+
+  async function init() {
+    try {
+      const workspaceID = await getUserWorkspaceID();
+      await fetchLoginLogoutTimes();
+      await fetchSensorCounts();
+      await loadAllSensorData(workspaceID);
+
+      setInterval(() => {
+        loadAllSensorData(workspaceID);
+      }, 10000);
+    } catch (err) {
+      alert("Veriler yüklenemedi: " + err.message);
+      window.location.href = "login.html";
+    }
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await fetch("/logout", { method: "POST", credentials: "include" });
+    window.location.href = "login.html";
+  });
+
+  init();
+</script>
+
+</body>
+</html>

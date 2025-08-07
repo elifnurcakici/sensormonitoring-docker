@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workspace Sensör Verileri</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body {
+    background: #1e1e2f;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    height: 60px;
+    padding: 0 30px;
+    background-color: #2b2b3d;
+  }
+  .logo {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #ff6b6b;
+    flex: 1;
+    cursor: pointer;       /* Tıklanabilir göster */
+      user-select: none;
+      transition: color 0.3s ease;
+      text-decoration: none; /* ← ALT ÇİZGİYİ KALDIRIR */
+  }
+
+  .logo:hover {
+      color: #e05555;        /* Hoverda renk değişimi */
+    }
+
+  nav {
+    display: flex;
+    gap: 20px;
+  }
+  nav a, nav button {
+    color: #fff;
+    background-color: #ff6b6b;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  nav a:hover, nav button:hover {
+    background-color: #e05555;
+  }
+
+  button {
+      width: 100%;
+      padding: 12px;
+      background-color: #ff6b6b;
+      border: none;
+      border-radius: 5px;
+      font-weight: 600;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #e05555;
+    }
+
+  select {
+    font-size: 1.1rem;
+    padding: 5px 10px;
+    margin-bottom: 20px;
+  }
+  .container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .sensor-block {
+    background: #2a2a40;
+    padding: 15px;
+    border-radius: 10px;
+    width: 30%;
+    min-width: 280px;
+  }
+  canvas {
+    width: 100% !important;
+    height: 200px !important;
+    background: #3b3b5c;
+    border-radius: 8px;
+  }
+  table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+    background: #3b3b5c;
+    border-radius: 8px;
+  }
+  th, td {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid #555;
+  }
+  th {
+    background: #4a4a7d;
+  }
+  tr:hover {
+    background: #5a5a8a;
+  }
+</style>
+</head>
+<body>
+  <header>
+  <a class="logo" href="dashboard.html">SenseWatch</a>
+  <nav>
+    <a href="change.html">Şifre Değiştir</a>
+    <button id="logoutBtn">Çıkış</button>
+  </nav>
+</header>
+
+
+<h1>Workspace Sensör Verileri</h1>
+
+<label for="workspaceSelect">Workspace Seç:</label>
+<select id="workspaceSelect"></select>
+
+<div class="container">
+  <div class="sensor-block" id="temperatureBlock">
+    <h2>Sıcaklık</h2>
+    <canvas id="tempChart"></canvas>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Değer</th><th>Zaman</th></tr>
+      </thead>
+      <tbody id="tempTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="sensor-block" id="humidityBlock">
+    <h2>Nem</h2>
+    <canvas id="humidityChart"></canvas>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Değer</th><th>Zaman</th></tr>
+      </thead>
+      <tbody id="humidityTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="sensor-block" id="pressureBlock">
+    <h2>Basınç</h2>
+    <canvas id="pressureChart"></canvas>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Değer</th><th>Zaman</th></tr>
+      </thead>
+      <tbody id="pressureTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Sayfa erişim kontrolü (sadece admin)
+  async function checkAccessAndRedirect() {
+    const res = await fetch("/api/user-info", { credentials: "include" });
+    if (!res.ok) {
+      alert("Yetkisiz giriş, lütfen tekrar giriş yapın.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const user = await res.json();
+    if (user.role !== "admin") {
+      alert("Bu sayfaya yalnızca admin erişebilir.");
+      window.location.href = "dashboard.html";
+      return;
+  }
+}
+
+  // Sensör sayısı yükle
+  async function fetchSensorCounts() {
+    try {
+      const res = await fetch('/api/sensor-counts', { credentials: "include" });
+      if (!res.ok) throw new Error('Sensor count alınamadı');
+      const counts = await res.json();
+
+      document.getElementById("tempCount").textContent = counts.temperature || 0;
+      document.getElementById("humidityCount").textContent = counts.humidity || 0;
+      document.getElementById("pressureCount").textContent = counts.pressure || 0;
+    } catch {
+      // Hata olursa sayılar 0 kalacak
+    }
+  }
+
+  // Chart objeleri
+  const charts = {
+    temperature: null,
+    humidity: null,
+    pressure: null
+  };
+
+  function updateChartAndTable(sensorType, readings) {
+    const canvasId = sensorType === "temperature" ? "tempChart" : sensorType + "Chart";
+    const tableBodyId = sensorType === "temperature" ? "tempTableBody" : sensorType + "TableBody";
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const tableBody = document.getElementById(tableBodyId);
+
+    const labels = readings.map(r => new Date(r.CreatedAt).toLocaleTimeString());
+    const data = readings.map(r => r.Value);
+
+    tableBody.innerHTML = "";
+
+    readings.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${r.ID}</td><td>${r.Value.toFixed(2)}</td><td>${new Date(r.CreatedAt).toLocaleString()}</td>`;
+      tableBody.appendChild(tr);
+    });
+
+    if (charts[sensorType]) {
+      charts[sensorType].data.labels = labels;
+      charts[sensorType].data.datasets[0].data = data;
+      charts[sensorType].update();
+    } else {
+      charts[sensorType] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: sensorType.charAt(0).toUpperCase() + sensorType.slice(1),
+            data: data,
+            borderColor: sensorType === 'temperature' ? 'rgb(255,99,132)' :
+                         sensorType === 'humidity' ? 'rgb(54,162,235)' : 'rgb(255,206,86)',
+            backgroundColor: 'rgba(0,0,0,0)',
+            tension: 0.3,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { ticks: { color: '#fff' }},
+            y: { ticks: { color: '#fff' }}
+          },
+          plugins: {
+            legend: { labels: { color: '#fff' } }
+          }
+        }
+      });
+    }
+  }
+
+  async function loadSensorDataByTypeAndWorkspace(sensorType, workspaceID) {
+    const sensorRes = await fetch(`/api/accessible-sensors?type=${sensorType}`, { credentials: "include" });
+    if (!sensorRes.ok) {
+      updateChartAndTable(sensorType, []);
+      return;
+    }
+
+    const sensors = await sensorRes.json();
+    const filteredSensors = sensors.filter(s => s.WorkspaceID === parseInt(workspaceID));
+    if (filteredSensors.length === 0) {
+      updateChartAndTable(sensorType, []);
+      return;
+    }
+
+    const sensorID = filteredSensors[0].ID;
+    const dataRes = await fetch(`/api/sensor-data?sensor_id=${sensorID}`, { credentials: "include" });
+    if (!dataRes.ok) {
+      updateChartAndTable(sensorType, []);
+      return;
+    }
+
+    const data = await dataRes.json();
+    updateChartAndTable(sensorType, data.reverse());
+  }
+
+  async function loadAllSensorData(workspaceID) {
+    await loadSensorDataByTypeAndWorkspace("temperature", workspaceID);
+    await loadSensorDataByTypeAndWorkspace("humidity", workspaceID);
+    await loadSensorDataByTypeAndWorkspace("pressure", workspaceID);
+  }
+
+  async function loadWorkspaces() {
+    const res = await fetch("/api/user-workspaces", { credentials: "include" });
+    if (!res.ok) {
+      alert("Workspace'ler alınamadı.");
+      return;
+    }
+
+    const data = await res.json();
+    const select = document.getElementById("workspaceSelect");
+    select.innerHTML = "";
+
+    data.workspaces.forEach(ws => {
+      const option = document.createElement("option");
+      option.value = ws.ID;
+      option.textContent = ws.Name;
+      select.appendChild(option);
+    });
+
+    // İlk workspace varsayılan olarak yüklensin
+    if (data.workspaces.length > 0) {
+      loadAllSensorData(data.workspaces[0].ID);
+    }
+
+    // Değiştikçe veri güncellensin
+    select.addEventListener("change", () => {
+      const selectedID = select.value;
+      loadAllSensorData(selectedID);
+    });
+  }
+
+  // Sayfa yüklenince çalışacaklar
+  document.addEventListener("DOMContentLoaded", async () => {
+    await checkAccessAndRedirect();
+    await fetchSensorCounts();
+    await loadWorkspaces();
+
+    // Belirli aralıklarla sensör verilerini yenile
+    setInterval(async () => {
+      const select = document.getElementById("workspaceSelect");
+      const selectedID = select.value;
+      await loadAllSensorData(selectedID);
+    }, 10000);
+
+    // Çıkış
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await fetch("/logout", { method: "POST", credentials: "include" });
+      window.location.href = "login.html";
+    });
+  });
+</script>
+
+
+</body>
+</html>
+
+

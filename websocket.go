@@ -9,7 +9,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -20,41 +19,43 @@ var upgrader = websocket.Upgrader{ // Wensocket bağlantısına HTTP isteğinden
 	// ancak biz bunu sadece belirli domainlerden gelen isteklere çevirebiliriz.
 }
 
-func handleWebSocket(w http.ResponseWriter, r *http.Request) { //HTTP isteği geldiğinde bu fonksiyon Websocket bağlantısını kurup veri gönderir.
-	ws, err := upgrader.Upgrade(w, r, nil) // HTTP bağlantısı WebSocket bağlantısına dönüştürülür.
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("WebSocket upgrade hatası:", err) // Başarısız olursa burada loglanıyor.
+		log.Println("WebSocket upgrade hatası:", err)
 		return
 	}
 	defer ws.Close()
 
-	ticker := time.NewTicker(5 * time.Second) // burada kanal her 5 saniyede bir tetikleniyor.
-	// Her 5 saniyede bir veri göndermek için bu teteikleyiciyi kullanırız.
-	defer ticker.Stop()
-
-	for { // sonsuz for döngüsü başlar
+	for {
 		select {
 		case <-broadcastChan:
-			var temp TemperatureReading
-			var hum HumidityReading
-			var press PressureReading
-
-			// Son kayıtları çek
-			gormDB.Order("created_at desc").First(&temp)  // burada TemperatureReading tablsoundan en son oluşturulan (created at' i en büyük olan)kaydı alıyor.
-			gormDB.Order("created_at desc").First(&hum)   // ""   HumidityReading tablsonndan
-			gormDB.Order("created_at desc").First(&press) // ""  PressureReading
-
-			// JSON olarak gönderilmek için bir map oluşturulur.
-			data := map[string]interface{}{
-				"temperature": temp,
-				"humidity":    hum,
-				"pressure":    press,
+			// Tüm sensörleri al
+			var sensors []Sensor
+			if err := gormDB.Find(&sensors).Error; err != nil {
+				log.Println("Sensörler alınamadı:", err)
+				continue
 			}
 
-			// Göndermek için
-			err := ws.WriteJSON(data) //WriteJSON ile datayı JSOn formatına çevirip WebSocket üzerinden gönderir
-			if err != nil {
-				break //Eğer hata olursa döngü kapanır.
+			data := make(map[string]interface{})
+
+			// Her bir sensör için son veriyi çek
+			for _, sensor := range sensors {
+				var reading SensorReading
+				err := gormDB.Where("sensor_id = ?", sensor.ID).
+					Order("created_at desc").
+					First(&reading).Error
+				if err != nil {
+					log.Println("Okuma alınamadı:", err)
+					continue
+				}
+				data[sensor.Name] = reading
+			}
+
+			// Verileri JSON olarak gönder
+			if err := ws.WriteJSON(data); err != nil {
+				log.Println("WebSocket yazma hatası:", err)
+				return
 			}
 		}
 	}

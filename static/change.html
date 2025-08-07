@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profil Düzenleme - SenseWatch</title>
+  <style>
+    body {
+      background-color: #1e1e2f;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      height: 60px;
+      padding: 0 30px;
+      background-color: #2b2b3d;
+    }
+
+    .logo {
+      font-weight: bold;
+      font-size: 1.5rem;
+      color: #ff6b6b;
+      flex: 1;
+      cursor: pointer;       /* Tıklanabilir göster */
+      user-select: none;
+      transition: color 0.3s ease;
+    }
+    .logo:hover {
+      color: #e05555;        /* Hoverda renk değişimi */
+    }
+
+    nav {
+      display: flex;
+      gap: 20px;
+    }
+
+    nav a,
+    nav button {
+      color: #fff;
+      background-color: #ff6b6b;
+      padding: 10px 10px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 400;
+      font-size: 1rem;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    nav a:hover,
+    nav button:hover {
+      background-color: #e05555;
+    }
+
+    main {
+      max-width: 400px;
+      margin: 40px auto 60px;
+      padding: 0 20px;
+    }
+
+    h2 {
+      color: #ff6b6b;
+      margin-bottom: 15px;
+      margin-top: 40px;
+    }
+
+    form {
+      background-color: #2b2b3d;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 40px;
+      box-sizing: border-box;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0 15px 0;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #ff6b6b;
+      border: none;
+      border-radius: 5px;
+      font-weight: 600;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #e05555;
+    }
+
+    .message {
+      margin-top: -10px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+
+    .success {
+      color: #4caf50;
+    }
+
+    .error {
+      color: #ff6666;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo" id="logo">SenseWatch</div>
+    <nav>
+      <a href="sensor.html">Sensör Detayları</a>
+      <button id="logoutBtn">Çıkış</button>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Kullanıcı Adı Değiştir</h2>
+    <form id="changeUsernameForm">
+      <input type="text" id="newUsername" placeholder="Yeni Kullanıcı Adı" required minlength="3" />
+      <button type="submit">Kullanıcı Adını Değiştir</button>
+      <div id="usernameMsg" class="message"></div>
+    </form>
+
+    <h2>Şifre Değiştir</h2>
+    <form id="changePasswordForm">
+      <input type="password" id="oldPassword" placeholder="Eski Şifre" required />
+      <input type="password" id="newPassword" placeholder="Yeni Şifre" required minlength="6" />
+      <button type="submit">Şifreyi Değiştir</button>
+      <div id="passwordMsg" class="message"></div>
+    </form>
+  </main>
+
+  <script>
+    // Logo tıklanınca dashboard.html'e git
+    document.getElementById('logo').addEventListener('click', () => {
+      window.location.href = 'dashboard.html';
+    });
+
+    const usernameForm = document.getElementById('changeUsernameForm');
+    const passwordForm = document.getElementById('changePasswordForm');
+
+    usernameForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newUsername = document.getElementById('newUsername').value.trim();
+      const msgEl = document.getElementById('usernameMsg');
+      msgEl.textContent = '';
+      try {
+        const res = await fetch('/change-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ new_username: newUsername }),
+        });
+        if (res.ok) {
+          msgEl.textContent = 'Kullanıcı adı başarıyla değiştirildi.';
+          msgEl.className = 'message success';
+        } else {
+          const text = await res.text();
+          msgEl.textContent = 'Hata: ' + text;
+          msgEl.className = 'message error';
+        }
+      } catch (err) {
+        msgEl.textContent = 'Sunucu hatası: ' + err.message;
+        msgEl.className = 'message error';
+      }
+    });
+
+    passwordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const oldPassword = document.getElementById('oldPassword').value.trim();
+      const newPassword = document.getElementById('newPassword').value.trim();
+      const msgEl = document.getElementById('passwordMsg');
+      msgEl.textContent = '';
+      try {
+        const res = await fetch('/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+        });
+        if (res.ok) {
+          msgEl.textContent = 'Şifre başarıyla değiştirildi.';
+          msgEl.className = 'message success';
+          passwordForm.reset();
+        } else {
+          const text = await res.text();
+          msgEl.textContent = 'Hata: ' + text;
+          msgEl.className = 'message error';
+        }
+      } catch (err) {
+        msgEl.textContent = 'Sunucu hatası: ' + err.message;
+        msgEl.className = 'message error';
+      }
+    });
+
+    // Çıkış butonu işlevi
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/logout', { method: 'POST' });
+      window.location.href = 'login.html';
+    });
+  </script>
+</body>
+</html>

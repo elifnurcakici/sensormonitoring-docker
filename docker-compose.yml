@@ -25,6 +25,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: yourpassword
       DB_NAME: sensordb
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     command: sh -c "sleep 10 && ./sensor-monitoring"
 
 volumes:

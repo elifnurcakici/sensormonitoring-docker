@@ -27,9 +27,9 @@ func connectDB() *gorm.DB {
 	}
 
 	// Tablolar otomatik oluşturulur
-	db.AutoMigrate(&User{}, &TemperatureReading{}, &HumidityReading{}, &PressureReading{})
+	db.AutoMigrate(&User{}, &Sensor{}, &SensorReading{})
 	//Eğer tablo zaten varsa da eksik sütunları tamamlar.
 
-	fmt.Println("PostgreSQL bağlantısı başarılı!")
+	fmt.Println("PostgreSQL bağlantısı başarılı ve tablolar migrate edildi! !")
 	return db
 }
